@@ -33,6 +33,9 @@ namespace BustAKlud
         Transform body;
         SpriteRenderer skullRenderer;
         SpriteRenderer glowRenderer;
+        SpriteRenderer shadeRenderer;  // dark pool under the halo so the colour stands out on the pale board art
+        SpriteRenderer auraRenderer;   // soft halo behind the cannon in the loaded colour
+        SpriteRenderer ringRenderer;   // slow ring that pulses outward in the same colour
         BubbleView loadedView;
         BubbleView nextView;
         float recoil;
@@ -67,6 +70,31 @@ namespace BustAKlud
             bodyRenderer.sprite = GameAssets.CannonBody;
             bodyRenderer.sortingOrder = GameConfig.OrderCannon;
             body = bodyGo.transform;
+
+            // A halo and a pulsing ring, behind the barrel and anchored to the cannon (they don't rotate).
+            // Normal blending rather than additive: added light washes out against the pale board art.
+            var shadeGo = new GameObject("CannonShade");
+            shadeGo.transform.SetParent(transform, false);
+            shadeGo.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            shadeGo.transform.localScale = Vector3.one * 1.75f;
+            shadeRenderer = shadeGo.AddComponent<SpriteRenderer>();
+            shadeRenderer.sprite = ProceduralSprites.Glow;
+            shadeRenderer.color = new Color(0.04f, 0.02f, 0.1f, 0.55f);
+            shadeRenderer.sortingOrder = GameConfig.OrderCannon - 3;
+
+            var auraGo = new GameObject("CannonAura");
+            auraGo.transform.SetParent(transform, false);
+            auraGo.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            auraRenderer = auraGo.AddComponent<SpriteRenderer>();
+            auraRenderer.sprite = ProceduralSprites.Glow;
+            auraRenderer.sortingOrder = GameConfig.OrderCannon - 1;
+
+            var ringGo = new GameObject("CannonRing");
+            ringGo.transform.SetParent(transform, false);
+            ringGo.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            ringRenderer = ringGo.AddComponent<SpriteRenderer>();
+            ringRenderer.sprite = ProceduralSprites.Ring;
+            ringRenderer.sortingOrder = GameConfig.OrderCannon - 1;
 
             Sprite skull = GameAssets.CannonSkull;
             if (skull != null)
@@ -265,24 +293,38 @@ namespace BustAKlud
             body.localPosition = (Vector3)(-Direction * (recoil * 0.03f));
         }
 
-        // Eases the skull to the loaded colour; a fresh load pops the skull and flares its glow.
+        // Eases everything that shows the loaded colour (skull, halo, ring) towards it; a fresh load pops the
+        // skull and flares the glow and halo.
         void ApplySkull(float dt)
         {
-            if (skullRenderer == null)
-                return;
-
             skullColor = Color.Lerp(skullColor, skullTarget, dt <= 0f ? 1f : 1f - Mathf.Exp(-16f * dt));
             skullPulse = Mathf.MoveTowards(skullPulse, 0f, dt * 3f);
-
-            skullRenderer.color = skullColor;
-            skullRenderer.transform.localScale = Vector3.one * (1f + 0.18f * skullPulse);
-
             bool loaded = Loaded != BubbleType.None;
-            float breathe = 0.3f + 0.1f * Mathf.Sin(Time.time * 3f);
-            Color glow = skullColor;
-            glow.a = loaded ? breathe + 0.55f * skullPulse : 0f;
-            glowRenderer.color = glow;
-            glowRenderer.transform.localScale = Vector3.one * (0.62f + 0.25f * skullPulse);
+
+            if (skullRenderer != null)
+            {
+                skullRenderer.color = skullColor;
+                skullRenderer.transform.localScale = Vector3.one * (1f + 0.18f * skullPulse);
+
+                float breathe = 0.3f + 0.1f * Mathf.Sin(Time.time * 3f);
+                Color glow = skullColor;
+                glow.a = loaded ? breathe + 0.55f * skullPulse : 0f;
+                glowRenderer.color = glow;
+                glowRenderer.transform.localScale = Vector3.one * (0.62f + 0.25f * skullPulse);
+            }
+
+            // Halo: a steady, breathing wash of the loaded colour around the cannon.
+            Color aura = skullColor;
+            aura.a = loaded ? 0.66f + 0.08f * Mathf.Sin(Time.time * 2.2f) + 0.3f * skullPulse : 0f;
+            auraRenderer.color = aura;
+            auraRenderer.transform.localScale = Vector3.one * (1.15f + 0.04f * Mathf.Sin(Time.time * 2.2f) + 0.3f * skullPulse);
+
+            // Ring: expands from the cannon and fades, once every 1.25 seconds.
+            float phase = Mathf.Repeat(Time.time * 0.8f, 1f);
+            Color ring = skullColor;
+            ring.a = loaded ? Mathf.Pow(1f - phase, 1.4f) * 0.95f : 0f;
+            ringRenderer.color = ring;
+            ringRenderer.transform.localScale = Vector3.one * Mathf.Lerp(0.55f, 1.5f, 1f - (1f - phase) * (1f - phase));
         }
     }
 }
