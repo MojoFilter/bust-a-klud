@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0514;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      #unity-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #0a0514;
+        outline: none;
+      }
+
+      #loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        background: radial-gradient(ellipse at 50% 40%, #2a1448 0%, #0a0514 70%);
+        color: #ffb347;
+        transition: opacity 0.6s ease;
+        z-index: 2;
+      }
+
+      #loader.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #loader h1 {
+        margin: 0;
+        font-size: clamp(36px, 8vw, 96px);
+        letter-spacing: 2px;
+        text-shadow: 0 4px 0 #3b1500, 0 0 30px rgba(255, 140, 30, 0.45);
+        animation: bob 2.4s ease-in-out infinite;
+      }
+
+      #loader p {
+        margin: 0;
+        color: #9cff66;
+        font-style: italic;
+        font-size: clamp(14px, 2.4vw, 26px);
+      }
+
+      #bar {
+        width: min(420px, 70vw);
+        height: 16px;
+        border: 3px solid #ff8c1e;
+        border-radius: 12px;
+        background: #1a0d2e;
+        overflow: hidden;
+      }
+
+      #fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #ff8c1e, #ffd75e);
+        transition: width 0.15s linear;
+      }
+
+      #fullscreen {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(255, 140, 30, 0.7);
+        border-radius: 10px;
+        background: rgba(20, 8, 36, 0.6);
+        color: #ffb347;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 3;
+      }
+
+      body:hover #fullscreen { opacity: 0.85; }
+      #fullscreen:hover { background: rgba(255, 140, 30, 0.35); }
+
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) rotate(-1deg); }
+        50% { transform: translateY(-10px) rotate(1deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+    <div id="loader">
+      <h1>BUST-A-KLUD</h1>
+      <p>summoning the bubbles...</p>
+      <div id="bar"><div id="fill"></div></div>
+    </div>
+
+    <button id="fullscreen" title="Fullscreen" aria-label="Fullscreen">&#x26F6;</button>
+
+    <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var loader = document.querySelector("#loader");
+      var fill = document.querySelector("#fill");
+      var fullscreenButton = document.querySelector("#fullscreen");
+
+      // Right-click swaps bubbles in the game, so the browser menu must stay out of the way.
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      createUnityInstance(canvas, {
+        arguments: [],
+#if PROGRESSIVE_ASSET_LOADING
+        primaryDataUrls: {{{ JSON.stringify(PRIMARY_DATA_FILES) }}},
+        secondaryDataUrls: {{{ JSON.stringify(SECONDARY_DATA_FILES) }}},
+#else
+        dataUrl: "Build/{{{ DATA_FILENAME }}}",
+#endif
+        frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+        codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}}
+      }, function (progress) {
+        fill.style.width = (progress * 100) + "%";
+      }).then(function (unityInstance) {
+        loader.classList.add("done");
+        canvas.focus();
+        fullscreenButton.onclick = function () { unityInstance.SetFullscreen(1); };
+      }).catch(function (message) {
+        loader.querySelector("p").textContent = "The ghouls interfered: " + message;
+      });
+    </script>
+  </body>
+</html>
