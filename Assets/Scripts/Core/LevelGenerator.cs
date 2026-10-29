@@ -29,7 +29,7 @@ namespace BustAKlud
     public static class LevelGenerator
     {
         const int ShapeCount = 7;
-        const float ClumpChance = 0.3f;
+        const float ClumpChance = 0.15f;   // low: big same-colour blobs let one shot drop half the board in a chain
 
         static readonly string[] Names =
         {
@@ -43,8 +43,8 @@ namespace BustAKlud
         public static LevelSpec GetSpec(int level)
         {
             level = Mathf.Max(1, level);
-            int colors = level <= 2 ? 3 : level <= 5 ? 4 : 5;
-            int rows = Mathf.Min(8, 4 + (level + 1) / 2);
+            int colors = level <= 1 ? 3 : level <= 4 ? 4 : 5;
+            int rows = Mathf.Min(8, 5 + level / 2);
             // Every shot counts now (not just misses), so the count starts roomy and tightens as levels go on.
             int shotLimit = Mathf.Max(4, 6 - (level - 1) / 3);
             return new LevelSpec(level, Names[(level - 1) % Names.Length], colors, rows, shotLimit);

@@ -88,7 +88,10 @@ namespace BustAKlud.Editor
 
         static void Build(BuildTarget target, string output, BuildOptions options = BuildOptions.None)
         {
-            CreateMainScene();
+            // Only generate the scene if it is missing: regenerating gives it fresh object IDs every time, which
+            // would show up as noise in version control after every build.
+            if (!File.Exists(ScenePath))
+                CreateMainScene();
             ConfigurePlayerSettings();
 
             BuildTargetGroup group = BuildPipeline.GetBuildTargetGroup(target);
